@@ -3,26 +3,25 @@
 const amt = 1;
 
 const Shared = {
-  getTicket: Fun([UInt], UInt),
-  showOutcome: Fun([UInt], Null)
+  showOutcome: Fun([UInt], Null),
 }
 
 export const main = Reach.App(() => {
   const A = Participant('Alice', {
     // Specify Alice's interact interface here
     ...hasRandom,
-    ...Shared,
+    getTicket: Fun([UInt], UInt),
     setParams: Fun([],Object({
       NFT: Token,
       ticketAmount: UInt,
     })),
-    seeHash: Fun([Digest], Null)
+    seeHash: Fun([Digest], Null),
   });
-  const B = Participant('Bob', {
+  const B = API('Bob', {
     // Specify Bob's interact interface here
-    ...Shared,
     showTicket: Fun([UInt], Null),
     seeWinner: Fun([UInt], Null),
+    showOutcome: Fun([UInt], Null),
   });
   init();
   A.only(() => {
@@ -38,6 +37,26 @@ export const main = Reach.App(() => {
   A.pay([[amt, NFT]]);
   commit();
 
+  const pickedTickets = new Map(Address, UInt);
+
+  const [[ticketAmount], k ] = call(B.getTicket)
+
+  // const [ ticket,ticketsPicked,isPicking] =
+  //   parallelReduce([ 0, 0, true ])
+  //     .invariant(ticketsPicked <= ticketAmount)
+  //     .while(ticketsPicked < ticketAmount && isPicking)
+  //     .api_(B.getTicket, (amt) => {
+  //       check(!pickedTickets.member())
+  //       return [ 0, (k) => {
+  //         k(ticket);
+  //         require(!pickedTickets.member(this,ticket));
+
+  //         return [ticket, ticketsPicked + 1, true]
+  //       }]
+  //     })
+  //      .timeout(DEADLINE, () => {
+  //        TIMEOUT_BLOCK
+  //      });
   unknowable(B, A(_winningTicket, _saltA));
 
   B.only(() => {
