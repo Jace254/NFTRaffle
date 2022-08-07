@@ -16,22 +16,24 @@ const runRaffle = async (numTickets) => { //The number of participants in the ra
   const accBobs = await stdlib.newTestAccounts(numTickets, startingBalanceB);
   const ctcBobs = accBobs.map(B => B.contract(backend, ctcAlice.getInfo()));
   
+  const fmt = (amt) => stdlib.formatCurrency(amt, 2)
   // creating a new token
-  const supply = 1;
-
-  const NFT = await stdlib.launchToken(accAlice,"Wukong","NFT",{ supply: supply});
-  accBobs.map(B => B.tokenAccept(NFT));
-  
+  const NFT = await stdlib.launchToken(accAlice,'Wukong','NFT',{supply: 1});
+  const NFTID = NFT.id;
+  accBobs.map(B => B.tokenAccept(NFTID));
   const params = {
-    NFT: NFT.id,
+    nftId: NFTID,
     ticketAmount: numTickets
-  }
+  };
 
-  const ticketsPicked = [];
+  const ticketsPicked = new Map();
+  const ticketsArr = Array.from({length: numTickets}, (_, i) => i + 1);
+  console.log(ticketsArr);
+  
 
   const printBalances = async (numBobs) => {
     const printBalance = async (name, acc) => {
-        const [balance, balance_NFT] = await stdlib.balancesOf(acc,[null, NFT]);
+        const [balance, balance_NFT] = await stdlib.balancesOf(acc,[null, NFTID]);
         console.log(`  [+] ${name} has ${fmt(balance)} ${stdlib.standardUnit} and ${balance_NFT} Wukong `);
     } 
     await printBalance('Alice', accAlice);
@@ -43,12 +45,45 @@ const runRaffle = async (numTickets) => { //The number of participants in the ra
   console.log("Starting balances:");
   await printBalances(numTickets);
 
-  const giveTickets = async () => {
-    
+  const giveTicketsFun = async () => {
+    var numTicketsArr = numTickets;
+    for(const [i, ctc] of ctcBobs.entries()) {
+      const randomIndex = Math.floor(Math.random() * numTicketsArr)
+      const randomTicket = ticketsArr[randomIndex];
+      try{
+          if(ticketsArr.length > 0){
+              await ctc.apis.Bob.getTicket(randomTicket);
+
+              ticketsPicked.set(randomTicket,i);
+              numTicketsArr = numTicketsArr - 1;
+              ticketsArr.splice(`${randomTicket}`,1);
+
+              console.log(`Bob #${i+1} picked ticket number ${randomTicket}`);
+
+          } else {
+            console.log(`All the tickets are picked for the Raffle.`);
+          }
+      } catch(e) {
+        console.log(e);
+      }
+    }
   }
 
-  const checkWin = async () => {
-    
+  const checkWinFun = async () => {
+    for(const [i, ctc] of ctcBobs.entries()){
+      try {
+        const isWinner = await ctc.apis.Bob.seeWinner();
+        if(isWinner){
+          console.log(`Bob #${i} has won the Raffle`);
+        } else {
+          console.log(`Better luck next time Bob #${i+1}`);
+        }
+      } catch(e) {
+        console.log(e);
+      }
+    }
+    console.log("Balances after Raffle:");
+    await printBalances(numTickets);
   }
 
   // launch Contract
@@ -60,53 +95,26 @@ const runRaffle = async (numTickets) => { //The number of participants in the ra
       return ticket;
     },
     setParams: () => {
-      console.log(`Started raffle with the parameters ${params}`)
+      console.log(`Started raffle with the parameters ${JSON.stringify(params)}`)
       return params;
     },
     seeHash: (hash) => {
-      console.log(`The winning number Hash is ${hash}`);
+      console.log(`\nThe winning ticket number Hash is ${hash}\n`);
     },
     giveTickets: () => {
-      for(const [i, ctc] of ctcBobs.entries()) {
-        const ticket = (Math.floor(Math.random() * numTickets) + 1);
-        const length = ticketsPicked.length();
-        const addr = ctc.getContractAddress()
-        try{
-          while(ticketsPicked.length == length){
-            if(!ticketsPicked.includes(ticket)){
-              await ctc.a.getTicket(ticket);
-              ticketsPicked.push[ticket , addr];
-              console.log(`Bob #${i} picked ticket number ${ticket}`);
-            } else {
-              console.log(`Sorry Bob #${i} that ticket is already picked\nPick another...`);
-            }
-          }
-        } catch(e) {
-          console.log(`All the tickets are picked for the Raffle.`);
-        }
-      }
+      giveTicketsFun();
+    },
+    showWinningNum: (num) => {
+      console.log(`\nThe winning ticket number is ${parseInt(num)}\n`);
     },
     checkWin: () => {
-      for(const [i, ctc] of ctcBobs.entries()){
-        try {
-          const isWinner = await ctc.a.seeWinner();
-          if(isWinner){
-            console.log(`Bob #${i} has won the Raffle`);
-          } else {
-            console.log(`Better luck next time Bob #${i}`);
-          }
-        } catch(e) {
-          console.log(e);
-        }
-      }
-      console.log("Balances after Raffle:");
-      await printBalances(numTickets);
+      checkWinFun();
     },
-    showOutcome: (Address) => {
-      const index = ticketsPicked.indexOf(Address);
-      console.log(`Bob #${index} won the Raffle with ticket ${ticketsPicked[Address]}`);
+    showOutcome: (ticket) => {
+      console.log(ticketsPicked.get(ticket));
+      console.log(`\nBob #${ticketsPicked.get(`${ticket}`)} won the Raffle with ticket number ${ticket}`);
     }
   });
 }
 
-await runRaffle(20);
+await runRaffle(10);
