@@ -24,7 +24,6 @@ export const main = Reach.App(() => {
     giveTickets: Fun([], Null),
     showWinningNum: Fun([UInt], Null),
     checkWin: Fun([], Null),
-    showOutcome: Fun([UInt], Null),
   });
   const B = API('Bob', {
     // Specify Bob's interact interface here
@@ -100,7 +99,6 @@ export const main = Reach.App(() => {
       })
 
   transfer(amt,nftId).to(winner);
-  A.interact.showOutcome(winningTicket);
   commit();
   exit();
 });

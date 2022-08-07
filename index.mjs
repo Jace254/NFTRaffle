@@ -26,9 +26,7 @@ const runRaffle = async (numTickets) => { //The number of participants in the ra
     ticketAmount: numTickets
   };
 
-  const ticketsPicked = new Map();
   const ticketsArr = Array.from({length: numTickets}, (_, i) => i + 1);
-  console.log(ticketsArr);
   
 
   const printBalances = async (numBobs) => {
@@ -54,9 +52,8 @@ const runRaffle = async (numTickets) => { //The number of participants in the ra
           if(ticketsArr.length > 0){
               await ctc.apis.Bob.getTicket(randomTicket);
 
-              ticketsPicked.set(randomTicket,i);
               numTicketsArr = numTicketsArr - 1;
-              ticketsArr.splice(`${randomTicket}`,1);
+              ticketsArr.splice(randomIndex,1);
 
               console.log(`Bob #${i+1} picked ticket number ${randomTicket}`);
 
@@ -74,7 +71,7 @@ const runRaffle = async (numTickets) => { //The number of participants in the ra
       try {
         const isWinner = await ctc.apis.Bob.seeWinner();
         if(isWinner){
-          console.log(`Bob #${i} has won the Raffle`);
+          console.log(`Bob #${i+1} has won the Raffle`);
         } else {
           console.log(`Better luck next time Bob #${i+1}`);
         }
@@ -110,10 +107,6 @@ const runRaffle = async (numTickets) => { //The number of participants in the ra
     checkWin: () => {
       checkWinFun();
     },
-    showOutcome: (ticket) => {
-      console.log(ticketsPicked.get(ticket));
-      console.log(`\nBob #${ticketsPicked.get(`${ticket}`)} won the Raffle with ticket number ${ticket}`);
-    }
   });
 }
 
